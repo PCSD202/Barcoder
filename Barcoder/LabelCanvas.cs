@@ -32,7 +32,7 @@ public static class LabelCanvas
         if (mode == ScaleMode.Stretch)
         {
             // Force to exactly fill the canvas
-            canvas.DrawImage(src, new SKRect(0, 0, canvasWidth, canvasHeight), new SKSamplingOptions(SKFilterMode.Linear), paint);
+            canvas.DrawImage(src, new SKRect(0, 0, canvasWidth, canvasHeight), new SKSamplingOptions(SKFilterMode.Nearest), paint);
         }
         else if (mode == ScaleMode.Shrink)
         {
