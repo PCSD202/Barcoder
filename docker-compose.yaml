@@ -1,0 +1,8 @@
+services:
+  barcoder:
+    build:
+      context: .
+      dockerfile: ./Barcoder/Dockerfile
+      
+    ports:
+      - "8080:8080"
