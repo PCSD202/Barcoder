@@ -1,10 +1,12 @@
 using System.Reflection;
 using Barcoder;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.OpenApi.Models;
 using Scalar.AspNetCore;
 using SkiaSharp;
+using ZXing;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateSlimBuilder(args);
 
 // Add services to the container.
 
@@ -24,6 +26,7 @@ builder.Services.AddOpenApi(options=>
 });
 
 var app = builder.Build();
+
 
 app.MapOpenApi();
 

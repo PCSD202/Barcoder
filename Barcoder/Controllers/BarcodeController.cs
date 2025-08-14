@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using SkiaSharp;
 using ZXing;
+using ZXing.Common;
 using ZXing.Datamatrix;
 using ZXing.Rendering;
 using ZXing.SkiaSharp.Rendering;
@@ -10,7 +11,7 @@ using ZXing.SkiaSharp.Rendering;
 namespace Barcoder.Controllers;
 
 [ApiController]
-[Route("generate")]
+[Route("api/")]
 public class BarcodeController(ILogger<BarcodeController> logger, FontService fontService) : ControllerBase
 {
     private readonly Writer writer = new MultiFormatWriter();
@@ -31,37 +32,63 @@ public class BarcodeController(ILogger<BarcodeController> logger, FontService fo
         return Ok(MultiFormatWriter.SupportedWriters.Select(x=>x.ToString()));
     }
     
-    [HttpGet]
-    public IActionResult Generate([FromQuery]string content, [FromQuery]string format = "CODE_128", [FromQuery]int width = 200, [FromQuery]int height = 200, [FromQuery]int textSize = 25)
+    [HttpGet("generate")]
+    public IActionResult GenerateGet([FromQuery] BarcodeRequest req)
+        => GenerateCore(req);
+
+    [HttpPost("generate")]
+    public IActionResult GeneratePost([FromBody] BarcodeRequest req)
+        => GenerateCore(req);
+    
+    private IActionResult GenerateCore(BarcodeRequest req)
     {
+        if (string.IsNullOrWhiteSpace(req.Content))
+            return BadRequest("Content must be provided.");
+
         BarcodeFormat realFormat;
         try
         {
-            realFormat = GetBarcodeFormat(format);
+            realFormat = GetBarcodeFormat(req.Format);
         }
         catch (InvalidEnumArgumentException)
         {
-            return BadRequest($"Invalid format: '{format}'");
+            return BadRequest($"Invalid format: '{req.Format}'");
         }
 
+        var opts = new EncodingOptions
+        {
+            PureBarcode = req.TextSize == 0,
+            NoPadding = true,
+            Width = req.Width,
+            Height = req.Height,
+            Margin = req.Margin
+        };
+        
+        
+        var code = writer.encode(req.Content, realFormat, req.Width, req.Height, opts.Hints);
+        var renderer = new SKBitmapRenderer
+        {
+            TextSize = req.TextSize,
+            TextFont = fontService.GetJetbrainsFont()
+        };
 
-        var code = writer.encode(content, realFormat, width, height);
-        var renderer = new SKBitmapRenderer();
-        if (textSize != 0)
-        {
-            renderer.TextSize = textSize;
-            renderer.TextFont = fontService.GetJetbrainsFont();
-        }
-        else
-        {
-            renderer.TextFont = null;
-        }
+        var image = renderer.Render(code, realFormat, req.Content, opts);
         
-        var image = renderer.Render(code, realFormat, textSize == 0 ? "":content);
-        var mStream = new MemoryStream();
-        image.Encode(mStream, SKEncodedImageFormat.Png, 100);
-        mStream.Position = 0;
-        
-        return File(mStream, "image/png");
+        using var composed = LabelCanvas.Compose(SKImage.FromBitmap(image), req.Width, req.Height, req.Stretch?ScaleMode.Stretch:ScaleMode.Shrink, background: SKColors.White);
+        using var data = composed.Encode(SKEncodedImageFormat.Png, 100);
+        return File(data.ToArray(), "image/png");
     }
+}
+
+
+public record BarcodeRequest
+{
+    public string Content { get; init; } = default!;
+    public string Format { get; init; } = "CODE_128";
+    public int Width  { get; init; } = 200;
+    public int Height { get; init; } = 200;
+    public int TextSize { get; init; } = 25;
+    
+    public int Margin { get; init; } = 0;
+    public bool Stretch { get; set; } = false;
 }
