@@ -27,7 +27,7 @@ var app = builder.Build();
 
 app.MapOpenApi();
 
-app.MapScalarApiReference(opt =>
+app.MapScalarApiReference("/",opt =>
 {
     opt.WithClientButton(false);
     opt.WithDynamicBaseServerUrl(true);
