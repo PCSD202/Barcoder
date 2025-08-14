@@ -72,8 +72,7 @@ public class BarcodeController(ILogger<BarcodeController> logger, FontService fo
             TextFont = fontService.GetJetbrainsFont()
         };
 
-        var image = renderer.Render(code, realFormat, req.Content, opts);
-        
+        using var image = renderer.Render(code, realFormat, req.Content, opts);
         using var composed = LabelCanvas.Compose(SKImage.FromBitmap(image), req.Width, req.Height, req.Stretch?ScaleMode.Stretch:ScaleMode.Shrink, background: SKColors.White);
         using var data = composed.Encode(SKEncodedImageFormat.Png, 100);
         return File(data.ToArray(), "image/png");
